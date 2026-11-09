@@ -40,6 +40,7 @@ from .live import LiveConfig, LiveTool, LiveToolResponse
 from .const import (
     CONF_API_KEY,
     CONF_AFFECTIVE_DIALOG,
+    CONF_CONTINUOUS_CONVERSATION,
     CONF_DETAILED_LOGGING,
     CONF_ENCOURAGE_WEB_SEARCH,
     CONF_ENABLE_SOUND_RESPONSES,
@@ -54,6 +55,7 @@ from .const import (
     CONF_TRANSCRIBE_GPT,
     CONF_VOICE,
     DEFAULT_AFFECTIVE_DIALOG,
+    DEFAULT_CONTINUOUS_CONVERSATION,
     DEFAULT_RESPONSE_TIMEOUT,
     DEFAULT_SUPPORT_BARGE_IN,
     DEFAULT_THINKING_LEVEL,
@@ -374,22 +376,28 @@ def _add_end_conversation_tool(
     tools: list[LiveTool],
     *,
     enable_sound_responses: bool = False,
+    enable_end_conversation: bool = True,
 ) -> list[LiveTool]:
     """Add integration-owned response and conversation tools."""
     return [
         *tools,
-        _END_CONVERSATION_TOOL,
+        *([_END_CONVERSATION_TOOL] if enable_end_conversation else []),
         *([PLAY_SOUND_TOOL] if enable_sound_responses else []),
     ]
 
 
 def _add_end_conversation_instruction(
-    system_instruction: str, *, enable_sound_responses: bool = False
+    system_instruction: str,
+    *,
+    enable_sound_responses: bool = False,
+    enable_end_conversation: bool = True,
 ) -> str:
     """Tell Gemini when to finish the Home Assistant conversation."""
-    instruction = f"{system_instruction}\n\n{_END_CONVERSATION_INSTRUCTION}"
+    instruction = system_instruction
+    if enable_end_conversation:
+        instruction = f"{instruction}\n\n{_END_CONVERSATION_INSTRUCTION}"
     if enable_sound_responses:
-        instruction += f"\n\n{SOUND_INSTRUCTION}"
+        instruction = f"{instruction}\n\n{SOUND_INSTRUCTION}"
     return instruction
 
 
@@ -626,6 +634,11 @@ class LiveModelSTT(SpeechToTextEntity):
         sound_responses_enabled = bool(
             config.get(CONF_ENABLE_SOUND_RESPONSES, DEFAULT_ENABLE_SOUND_RESPONSES)
         )
+        continuous_conversation = bool(
+            config.get(
+                CONF_CONTINUOUS_CONVERSATION, DEFAULT_CONTINUOUS_CONVERSATION
+            )
+        )
         api_ids = config.get(CONF_LLM_HASS_API, [llm.LLM_API_ASSIST])
 
         if api_ids:
@@ -680,7 +693,9 @@ class LiveModelSTT(SpeechToTextEntity):
                 native_search_grounding=True,
             )
         system_instruction = _add_end_conversation_instruction(
-            system_instruction, enable_sound_responses=sound_responses_enabled
+            system_instruction,
+            enable_sound_responses=sound_responses_enabled,
+            enable_end_conversation=continuous_conversation,
         )
 
         live_tools = _add_end_conversation_tool(
@@ -692,6 +707,7 @@ class LiveModelSTT(SpeechToTextEntity):
             if llm_api
             else [],
             enable_sound_responses=sound_responses_enabled,
+            enable_end_conversation=continuous_conversation,
         )
         _LOGGER.debug(
             "Exposing %d tools to the live model: %s",
@@ -1294,6 +1310,7 @@ class LiveModelSTT(SpeechToTextEntity):
                         assistant_text=tts_message,
                         audio=response_audio_stream,
                         assistant_text_stream=response_text_stream,
+                        complete_conversation=not continuous_conversation,
                     )
                 )
                 if not result_future.done():
@@ -1488,6 +1505,9 @@ class LiveModelSTT(SpeechToTextEntity):
             return silent_success()
 
         assistant_text = response_text
+
+        if not continuous_conversation:
+            session_manager.complete_conversation(conversation_id)
 
         conversation_complete = not session_manager.should_continue_conversation(
             conversation_id
