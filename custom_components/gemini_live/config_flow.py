@@ -17,6 +17,7 @@ from .const import (
     AVAILABLE_VOICES_INFO,
     CONF_AFFECTIVE_DIALOG,
     CONF_API_KEY,
+    CONF_CONTINUOUS_CONVERSATION,
     CONF_DETAILED_LOGGING,
     CONF_ELEVENLABS_AGENT_ID,
     CONF_ENCOURAGE_WEB_SEARCH,
@@ -32,6 +33,7 @@ from .const import (
     CONF_TRANSCRIBE_GPT,
     CONF_VOICE,
     DEFAULT_AFFECTIVE_DIALOG,
+    DEFAULT_CONTINUOUS_CONVERSATION,
     DEFAULT_ENCOURAGE_WEB_SEARCH,
     DEFAULT_ENABLE_SOUND_RESPONSES,
     DEFAULT_MODEL,
@@ -312,6 +314,12 @@ def _provider_schema(
                 unit_of_measurement="seconds",
             )
         ),
+        vol.Optional(
+            CONF_CONTINUOUS_CONVERSATION,
+            default=current.get(
+                CONF_CONTINUOUS_CONVERSATION, DEFAULT_CONTINUOUS_CONVERSATION
+            ),
+        ): selector.BooleanSelector(),
     }
     if not is_personaplex:
         fields[

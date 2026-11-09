@@ -6,6 +6,7 @@ from contextlib import aclosing
 import pytest
 
 from gemini_live.const import (
+    CONF_CONTINUOUS_CONVERSATION,
     CONF_RESPONSE_TIMEOUT,
     CONF_SUPPORT_BARGE_IN,
 )
@@ -211,4 +212,39 @@ async def test_slow_real_speech_honours_configured_response_timeout(entity_class
         assert b"".join([chunk async for chunk in turn.audio.async_chunks()]) == LONG_AUDIO
         assert manager.should_continue_conversation("conversation-1")
     finally:
+        await manager.async_close_all()
+
+
+@pytest.mark.parametrize("entity_class", ENTITY_CLASSES)
+async def test_continuous_conversation_disabled_terminates_turn(entity_class) -> None:
+    """When continuous conversation is disabled, the turn finishes completed."""
+    entity, manager, turns = _make_entity(
+        FakeHass(),
+        {
+            "api_key": "k",
+            CONF_SUPPORT_BARGE_IN: False,
+            CONF_RESPONSE_TIMEOUT: 30,
+            CONF_CONTINUOUS_CONVERSATION: False,
+        },
+        entity_class,
+    )
+    client = ScriptedClient(LongReply())
+    _bind_client(entity, client)
+    mic = MicStream()
+    mic.put(MIC_CHUNK)
+    mic.close()
+    run = asyncio.create_task(_run(entity, mic))
+    try:
+        turn = await _wait_for_turn(turns)
+        assert turn is not None
+        assert turn.complete_conversation is True
+        await asyncio.wait_for(run, 2)
+        assert not manager.should_continue_conversation("conversation-1")
+        assert not any(
+            tool.name == "end_conversation" for tool in client.captured_config.tools
+        )
+        assert "end_conversation" not in client.captured_config.system_instruction
+    finally:
+        run.cancel()
+        await asyncio.gather(run, return_exceptions=True)
         await manager.async_close_all()
