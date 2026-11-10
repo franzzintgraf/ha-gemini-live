@@ -4,13 +4,6 @@ All notable changes to Gemini Live for Home Assistant are documented here.
 
 ## Unreleased
 
-- Added a `Continuous conversation` configuration option. Enabled by default;
-  when disabled, conversations terminate immediately after the first response
-  so voice satellites return to waiting for the wake word without opening the
-  microphone for follow-up turns. When continuous conversation is disabled,
-  the backend provider connection is closed immediately and the `end_conversation`
-  tool and instruction are omitted to save prompt tokens.
-
 ## 1.0.12
 
 - Documented setup for Gemini, OpenAI, QwenCloud, and ElevenLabs Agents,

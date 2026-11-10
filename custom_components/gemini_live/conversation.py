@@ -20,7 +20,6 @@ from .live import LiveConfig, LiveTool, LiveToolResponse
 from .const import (
     CONF_API_KEY,
     CONF_AFFECTIVE_DIALOG,
-    CONF_CONTINUOUS_CONVERSATION,
     CONF_ENCOURAGE_WEB_SEARCH,
     CONF_ENABLE_SOUND_RESPONSES,
     CONF_MODEL,
@@ -32,7 +31,6 @@ from .const import (
     CONF_TRANSCRIBE_GPT,
     CONF_VOICE,
     DEFAULT_AFFECTIVE_DIALOG,
-    DEFAULT_CONTINUOUS_CONVERSATION,
     DEFAULT_SYSTEM_INSTRUCTION,
     DEFAULT_THINKING_LEVEL,
     DEFAULT_ENCOURAGE_WEB_SEARCH,
@@ -181,11 +179,6 @@ class LiveModelConversationAgent(conversation.ConversationEntity):
         sound_responses_enabled = bool(
             config.get(CONF_ENABLE_SOUND_RESPONSES, DEFAULT_ENABLE_SOUND_RESPONSES)
         )
-        continuous_conversation = bool(
-            config.get(
-                CONF_CONTINUOUS_CONVERSATION, DEFAULT_CONTINUOUS_CONVERSATION
-            )
-        )
         if self.supports_search_grounding:
             encourage_web_search = bool(
                 config.get(
@@ -205,9 +198,7 @@ class LiveModelConversationAgent(conversation.ConversationEntity):
         api_ids = config.get(CONF_LLM_HASS_API, [llm.LLM_API_ASSIST])
         if not api_ids:
             live_tools = _add_end_conversation_tool(
-                [],
-                enable_sound_responses=sound_responses_enabled,
-                enable_end_conversation=continuous_conversation,
+                [], enable_sound_responses=sound_responses_enabled
             )
             system_instruction = _add_search_tool_instruction(
                 system_instruction,
@@ -216,9 +207,7 @@ class LiveModelConversationAgent(conversation.ConversationEntity):
                 native_search_grounding=self.supports_search_grounding,
             )
             system_instruction = _add_end_conversation_instruction(
-                system_instruction,
-                enable_sound_responses=sound_responses_enabled,
-                enable_end_conversation=continuous_conversation,
+                system_instruction, enable_sound_responses=sound_responses_enabled
             )
             return None, live_tools, system_instruction
 
@@ -242,9 +231,7 @@ class LiveModelConversationAgent(conversation.ConversationEntity):
                 native_search_grounding=self.supports_search_grounding,
             )
             system_instruction = _add_end_conversation_instruction(
-                system_instruction,
-                enable_sound_responses=sound_responses_enabled,
-                enable_end_conversation=continuous_conversation,
+                system_instruction, enable_sound_responses=sound_responses_enabled
             )
 
             live_tools = _add_end_conversation_tool(
@@ -254,7 +241,6 @@ class LiveModelConversationAgent(conversation.ConversationEntity):
                     encourage_web_search and not self.supports_search_grounding,
                 ),
                 enable_sound_responses=sound_responses_enabled,
-                enable_end_conversation=continuous_conversation,
             )
 
             _LOGGER.debug(
@@ -269,9 +255,7 @@ class LiveModelConversationAgent(conversation.ConversationEntity):
                 exc,
             )
             live_tools = _add_end_conversation_tool(
-                [],
-                enable_sound_responses=sound_responses_enabled,
-                enable_end_conversation=continuous_conversation,
+                [], enable_sound_responses=sound_responses_enabled
             )
             system_instruction = _add_search_tool_instruction(
                 system_instruction,
@@ -280,9 +264,7 @@ class LiveModelConversationAgent(conversation.ConversationEntity):
                 native_search_grounding=self.supports_search_grounding,
             )
             system_instruction = _add_end_conversation_instruction(
-                system_instruction,
-                enable_sound_responses=sound_responses_enabled,
-                enable_end_conversation=continuous_conversation,
+                system_instruction, enable_sound_responses=sound_responses_enabled
             )
             return (
                 None,
@@ -344,11 +326,6 @@ class LiveModelConversationAgent(conversation.ConversationEntity):
         sound_selected = False
         sound_responses_enabled = bool(
             config.get(CONF_ENABLE_SOUND_RESPONSES, DEFAULT_ENABLE_SOUND_RESPONSES)
-        )
-        continuous_conversation = bool(
-            config.get(
-                CONF_CONTINUOUS_CONVERSATION, DEFAULT_CONTINUOUS_CONVERSATION
-            )
         )
         native_audio_model = "native-audio" in (model or "")
 
@@ -628,21 +605,11 @@ class LiveModelConversationAgent(conversation.ConversationEntity):
         intent_response = IntentResponse(language=language)
         intent_response.async_set_speech(assistant_text)
 
-        config = {**self.entry.data, **self.entry.options}
-        continuous_conversation = bool(
-            config.get(
-                CONF_CONTINUOUS_CONVERSATION, DEFAULT_CONTINUOUS_CONVERSATION
-            )
-        )
-        if not continuous_conversation:
-            session_manager.complete_conversation(conversation_id)
-
         return conversation.ConversationResult(
             response=intent_response,
             conversation_id=conversation_id,
             continue_conversation=(
-                continuous_conversation
-                and session_manager.should_continue_conversation(conversation_id)
+                session_manager.should_continue_conversation(conversation_id)
             ),
         )
 

@@ -13,7 +13,6 @@ from gemini_live.config_flow import (
 from gemini_live.const import (
     CONF_AFFECTIVE_DIALOG,
     CONF_API_KEY,
-    CONF_CONTINUOUS_CONVERSATION,
     CONF_MODEL,
     CONF_RESPONSE_TIMEOUT,
     CONF_SEARCH_GROUNDING,
@@ -22,7 +21,6 @@ from gemini_live.const import (
     CONF_THINKING_LEVEL,
     CONF_VOICE,
     DEFAULT_AFFECTIVE_DIALOG,
-    DEFAULT_CONTINUOUS_CONVERSATION,
     DEFAULT_RESPONSE_TIMEOUT,
     DEFAULT_SEARCH_GROUNDING,
     DEFAULT_THINKING_LEVEL,
@@ -109,26 +107,6 @@ def test_sound_responses_are_opt_in_and_preserved_in_options() -> None:
     assert CONF_ENABLE_SOUND_RESPONSES not in [
         marker.schema for marker in _provider_schema(PROVIDER_PERSONAPLEX).schema
     ]
-
-
-def test_continuous_conversation_defaults_to_true_and_can_be_disabled() -> None:
-    for provider in (PROVIDER_GEMINI, PROVIDER_OPENAI):
-        input_data = {
-            CONF_API_KEY: "key",
-            CONF_MODEL: _available_models(_provider_schema(provider))[0],
-            CONF_VOICE: _VALID_VOICE[provider],
-        }
-        assert (
-            _provider_schema(provider)(input_data)[CONF_CONTINUOUS_CONVERSATION]
-            is DEFAULT_CONTINUOUS_CONVERSATION
-        )
-        assert DEFAULT_CONTINUOUS_CONVERSATION is True
-        assert (
-            _provider_schema(provider, {CONF_CONTINUOUS_CONVERSATION: False})(input_data)[
-                CONF_CONTINUOUS_CONVERSATION
-            ]
-            is False
-        )
 
 
 def test_llm_api_selector_lists_registered_apis(monkeypatch) -> None:
